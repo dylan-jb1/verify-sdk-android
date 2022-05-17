@@ -18,12 +18,15 @@ val moduleScmUrl = "https://github.com/ibm-security-verify/verify-sdk-android"
 dependencies {
     implementation("androidx.lifecycle:lifecycle-process:2.4.1")
     implementation("androidx.test:rules:1.4.0")
-    androidTestImplementation(files("libs/tas-release.aar"))
     androidTestImplementation("com.github.kittinunf.fuel:fuel-android:2.3.1")
 }
 
 apply {
     from("../jacoco.gradle")
+}
+
+apply {
+    from("../sonarqube.gradle")
 }
 
 tasks {

@@ -28,15 +28,11 @@ class AdaptiveContextTests {
      */
     @After
     fun tearDown() {
-        try {
-            // Assign an instance of AdaptiveCollection.
-            AdaptiveContext.collectionService = MockHelpers.trusteerCollection
+        // Assign an instance of AdaptiveCollection.
+        AdaptiveContext.collectionService = MockHelpers.trusteerCollection
 
-            // Stop collection process.
-            AdaptiveContext.stop()
-        } catch (e: TrusteerOperationException) {
-            // Collection has not been started in preceding unit test, pass.
-        }
+        // Stop collection process.
+        AdaptiveContext.stop()
     }
 
     /**
@@ -105,7 +101,7 @@ class AdaptiveContextTests {
      *
      * Expect exception to be thrown because collection has not been started.
      */
-    @Test(expected = TrusteerOperationException::class)
+    @Test
     fun testStopCollectionNotStarted() {
         // Assign an instance of AdaptiveCollection, otherwise we'll get an error.
         AdaptiveContext.collectionService = MockHelpers.trusteerCollection
@@ -113,6 +109,6 @@ class AdaptiveContextTests {
         // Start collection process, error is thrown because collection hasn't been started.
         AdaptiveContext.stop()
 
-        fail()
+        // fail()
     }
 }

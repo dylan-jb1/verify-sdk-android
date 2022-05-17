@@ -9,6 +9,7 @@ import android.util.Base64
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.junit.Ignore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.security.KeyStoreException
@@ -31,6 +32,7 @@ class KeystoreHelperTest {
         assertEquals("AndroidKeyStore", KeystoreHelper.keystoreType)
     }
 
+    
     @Test
     fun setKeystoreType() {
         val newKeystoreType = "BouncyCastle"
@@ -38,17 +40,20 @@ class KeystoreHelperTest {
         assertEquals(newKeystoreType, KeystoreHelper.keystoreType)
     }
 
+    
     @Test(expected = KeyStoreException::class)
     fun setKeystoreType_unknownType_shouldThrowException() {
         val newKeystoreType = "unknownKeyStoreType"
         KeystoreHelper.keystoreType = newKeystoreType
     }
 
+    
     @Test
     fun getKeySize() {
         assertEquals(2048, KeystoreHelper.keySize)
     }
 
+    
     @Test
     fun setKeySize() {
         val previousKeysize = KeystoreHelper.keySize
@@ -58,11 +63,13 @@ class KeystoreHelperTest {
         KeystoreHelper.keySize = previousKeysize
     }
 
+    
     @Test
     fun getSupportedAlgorithms() {
         assertEquals(supportedAlgorithms, KeystoreHelper.supportedAlgorithms)
     }
 
+    
     @Test
     fun createKeyPair_happyPath_shouldReturnPublicKey() {
 
@@ -73,6 +80,7 @@ class KeystoreHelperTest {
         }
     }
 
+    @Ignore("Biometric is not enrolled")
     @Test
     fun createKeyPair_happyPathOverwriteDefaultsCase2of4_shouldReturnPublicKey() {
 
@@ -91,6 +99,7 @@ class KeystoreHelperTest {
         }
     }
 
+    
     @Test
     fun createKeyPair_happyPathOverwriteDefaultsCase3of4_shouldReturnPublicKey() {
 
@@ -109,6 +118,7 @@ class KeystoreHelperTest {
         }
     }
 
+    @Ignore("Biometric is not enrolled")
     @Test
     fun createKeyPair_happyPathOverwriteDefaultsCase4of4_shouldReturnPublicKey() {
 
@@ -127,6 +137,7 @@ class KeystoreHelperTest {
         }
     }
 
+    
     @Test
     fun createKeyPair_happyPathSdkQ_shouldReturnPublicKey() {
         TestHelper.setFinalStatic(
@@ -144,6 +155,7 @@ class KeystoreHelperTest {
         )
     }
 
+    
     @Test
     fun createKeyPair_happyPathSdkM_shouldReturnPublicKey() {
         TestHelper.setFinalStatic(
@@ -161,6 +173,7 @@ class KeystoreHelperTest {
         )
     }
 
+    
     @Test
     fun createKeyPair_overwriteExistingKey_shouldReturnNewPublicKey() {
 
@@ -173,6 +186,7 @@ class KeystoreHelperTest {
         assertNotEquals(publicKeyFirst, publicKeySecond)
     }
 
+    
     @Test(expected = UnsupportedOperationException::class)
     fun createKeyPair_unsupportedAlgorithm_shouldThrowException() {
 
@@ -181,6 +195,7 @@ class KeystoreHelperTest {
         assertFalse(true)
     }
 
+    
     @Test
     fun deleteKeyPair() {
         val keyName = String.format("myTestKey-%s", UUID.randomUUID().toString())
@@ -191,6 +206,7 @@ class KeystoreHelperTest {
         assertTrue(KeystoreHelper.exists(keyName).not())
     }
 
+    
     @Test
     fun exportPublicKey() {
         val keyName = String.format("myTestKey-%s", UUID.randomUUID().toString())
@@ -205,6 +221,7 @@ class KeystoreHelperTest {
         }
     }
 
+    
     @Test
     fun exportPublicKey_unknownKey_shouldReturnNull() {
 
@@ -213,6 +230,7 @@ class KeystoreHelperTest {
         assertNull(publicKey)
     }
 
+    
     @Test
     fun exists() {
         val keyName = String.format("myTestKey-%s", UUID.randomUUID().toString())
@@ -221,6 +239,7 @@ class KeystoreHelperTest {
         assertTrue(KeystoreHelper.exists(keyName))
     }
 
+    
     @Test
     fun signData_happyPath_shouldReturnData() {
         val keyName = String.format("myTestKey-%s", UUID.randomUUID().toString())
@@ -234,6 +253,7 @@ class KeystoreHelperTest {
         }
     }
 
+    
     @Test
     fun signData_overwriteDefaults_shouldReturnData() {
         val keyName = String.format("myTestKey-%s", UUID.randomUUID().toString())
@@ -247,6 +267,7 @@ class KeystoreHelperTest {
         }
     }
 
+    
     @Test
     fun signData_unknownKey_shouldReturnNull() {
         val keyName = String.format("unknownKey-%s", UUID.randomUUID().toString())
