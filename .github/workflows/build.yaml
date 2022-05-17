@@ -55,7 +55,7 @@ jobs:
 #   run: ./gradlew publishToMavenLocal dependencyCheckAnalyze assemble dokkaGfm dokkaHtml dokkaJavadoc dokkaJekyll 
         run: |
           echo sdk.dir=/Users/runner/Library/Android/sdk > local.properties
-          ./gradlew assembleRelease dependencyCheckAnalyze dokkaJavadoc jacocoDebugCoverageReport sonarqube -Dsonar.login=${{ secrets.SONAR_TOKEN }} --info
+          ./gradlew assembleRelease dependencyCheckAnalyze dokkaJavadoc jacocoDebugCoverageReport sonarqube -Dsonar.login=${{ secrets.SONAR_TOKEN }} --info --stacktrace
       - name: Run Gradle tests
         run: ./gradlew test
       - name: Upload Release
