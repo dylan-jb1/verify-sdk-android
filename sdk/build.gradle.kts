@@ -18,7 +18,7 @@ buildscript {
         classpath("com.android.tools.build:gradle:7.1.2")
         classpath("org.jetbrains.dokka:dokka-gradle-plugin:1.4.32")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.10")
-        classpath("org.owasp:dependency-check-gradle:7.1.0.1")
+        classpath("org.owasp:dependency-check-gradle:6.5.0.1")
         classpath("org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.3")
         classpath("gradle.plugin.com.hcl.security:appscan-gradle-plugin:1.0.5")
         classpath("org.jetbrains.kotlin:kotlin-serialization:1.6.10")
