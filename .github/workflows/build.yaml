@@ -1,0 +1,152 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Verify SDK release
+
+on: 
+  pull_request:
+  push:
+    branches:
+    - main
+    - develop
+    tags:
+      - 'v*'
+
+jobs:    
+  build_and_deploy:
+    name: Build and deploy
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: ./sdk 
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+      - name: Install Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+      - name: Fetch version info
+        id: fetch_version
+        run: |
+          echo "::set-output name=version_code::$(grep -o 'versionCode\s\+=\s\+[0-9]\+' ./buildSrc/src/main/kotlin/com/ibm/security/verifysdk/plugin/VerifySdkBuildPlugin.kt | awk '{ print $3 }')"
+          echo ::set-output name=version_name::$(grep -o "versionName\s\+=\s\+['\"]\([0-9\.]\+\)" ./buildSrc/src/main/kotlin/com/ibm/security/verifysdk/plugin/VerifySdkBuildPlugin.kt | awk '{ print $3 }' | cut -c 2-)
+      - name: Install Android SDKs & Accept Licenses
+        run: |
+          mkdir -p /Users/runner/Library/Android/sdk
+          cd /Users/runner/Library/Android/sdk
+          curl --output cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-mac-8092744_latest.zip
+          unzip cmdline-tools.zip
+          rm cmdline-tools.zip
+          cd ./cmdline-tools/bin/
+          y | ./sdkmanager --licenses --sdk_root=./../..
+          ./sdkmanager --install 'system-images;android-30;google_apis;x86_64' --sdk_root=./../..
+          ./sdkmanager --install 'emulator' --sdk_root=./../..
+          ./sdkmanager --install 'tools' --sdk_root=./../..
+          ./sdkmanager --install 'platform-tools' --sdk_root=./../..
+          ./sdkmanager --install 'build-tools;30.0.0' --sdk_root=./../..
+      - name: Create android emulator
+        run: |
+          echo no | /Users/runner/Library/Android/sdk/cmdline-tools/bin/avdmanager create avd --force --name testAVD --abi google_apis/x86_64 --package 'system-images;android-30;google_apis;x86_64'
+          sed -i '' 's/image.sysdir.1=sdk\/system-images\/android-30\/google_apis\/x86_64\//image.sysdir.1=system-images\/android-30\/google_apis\/x86_64\//g' /Users/runner/.android/avd/testAVD.avd/config.ini
+      - name: Run android emulator
+        run: /Users/runner/Library/Android/sdk/emulator/emulator -avd testAVD -verbose  > /dev/null 2>&1 & # run emulator but hide output so commands can be run
+      - name: Build with Gradle
+#   run: ./gradlew publishToMavenLocal dependencyCheckAnalyze assemble dokkaGfm dokkaHtml dokkaJavadoc dokkaJekyll 
+        run: |
+          echo sdk.dir=/Users/runner/Library/Android/sdk > local.properties
+          sudo ./gradlew assembleRelease dependencyCheckAnalyze dokkaJavadoc jacocoDebugCoverageReport sonarqube -Dsonar.login=${{ secrets.SONAR_TOKEN }} --info
+      - name: Run Gradle tests
+        run: ./gradlew test
+      - name: Upload Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ format( '{0}-{1}', steps.fetch_version.outputs.version_name, steps.fetch_version.outputs.version_code) }}
+        with:
+          tag_name: ${{ env.VERSION }}
+          release_name: ${{ env.VERSION }}
+          draft: false
+          prerelease: false
+      - name: Upload Core SDK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./sdk/core/build/outputs/aar/core-release.aar
+          asset_name: core-release.aar
+          asset_content_type: application/gzip
+      - name: Upload Adaptive SDK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./sdk/adaptive/build/outputs/aar/adaptive-release.aar
+          asset_name: adaptive-release.aar
+          asset_content_type: application/gzip
+
+      - name: Upload Core Dependency scan
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./sdk/core/build/reports/dependency-check-report.html
+          asset_name: core_dependency-check-report.html
+          asset_content_type: text/html
+      - name: Upload Adaptive Dependency scan
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./sdk/adaptive/build/reports/dependency-check-report.html
+          asset_name: adaptive_dependency-check-report.html
+          asset_content_type: text/html
+
+      - name: Fetch sonarqube report
+        run: 'curl -u ${{ secrets.SONAR_TOKEN }}: "https://cp4d-sonarqube.svl.ibm.com/sonar/api/security_reports/download?project=com.ibm.security.verifysdk" -o sonarqube_report.pdf'
+      - name: Upload sonarqube report
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./sdk/sonarqube_report.pdf
+          asset_name: sonarqube_report.pdf
+          asset_content_type: application/pdf
+
+      - name: Upload Dokka JavaDoc HTML to I/O repo
+        run: |
+          git clone https://github.com/dylan-jb1/ibm-security-verify.github.io.git
+          cd ibm-security-verify.github.io
+          git checkout android_sdk_v3
+          cd ..
+          rm -r ibm-security-verify.github.io/android/*
+          mkdir -p ibm-security-verify.github.io/android/core/docs
+          mkdir -p ibm-security-verify.github.io/android/adaptive/docs
+
+          cp -R ./core/build/dokka/javadoc/. ibm-security-verify.github.io/android/core/docs
+          cp -R ./adaptive/build/dokka/javadoc/. ibm-security-verify.github.io/android/adaptive/docs
+          cd ibm-security-verify.github.io
+
+          git config --global user.name "Dylan Bowler"
+          git config --global user.email "89441511+dylan-jb1@users.noreply.github.com"
+
+          git add .
+          git diff-index --quiet HEAD || git commit -m "[GitHub Actions] Auto-Documentation Update - Android SDK"
+          git status
+          git config --get remote.origin.url
+          git remote set-url origin https://dylan-jb1:${{ secrets.API_TOKEN_GITHUB }}@github.com/dylan-jb1/ibm-security-verify.github.io.git
+          git push origin
+          git config --get remote.origin.url
+
+      - name: Cleanup Gradle Cache
+      # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
+      # Restoring these files from a GitHub Actions cache might cause problems for future builds.
+        run: |
+          rm -f /Users/runner/.gradle/caches/modules-2/modules-2.lock
+          rm -f /Users/runner/.gradle/caches/modules-2/gc.properties 
